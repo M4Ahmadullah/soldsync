@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { EbayLogo, EtsyLogo } from './PlatformLogos'
 
 interface ConnectCardProps {
   platform: 'ebay' | 'etsy'
@@ -21,14 +22,7 @@ const PLATFORM_META = {
     color: 'text-[#e53238]',
     bgColor: 'bg-[#fff3f3]',
     borderColor: 'border-[#ffd0d0]',
-    logo: (
-      <svg viewBox="0 0 100 40" className="h-6 w-auto" aria-label="eBay">
-        <text x="2" y="32" fontSize="36" fontWeight="bold" fill="#e53238">e</text>
-        <text x="24" y="32" fontSize="36" fontWeight="bold" fill="#0064d2">B</text>
-        <text x="46" y="32" fontSize="36" fontWeight="bold" fill="#f5af02">a</text>
-        <text x="68" y="32" fontSize="36" fontWeight="bold" fill="#86b817">y</text>
-      </svg>
-    ),
+    logo: <EbayLogo size={16} />,
   },
   etsy: {
     label: 'Etsy',
@@ -37,11 +31,7 @@ const PLATFORM_META = {
     color: 'text-[#f45800]',
     bgColor: 'bg-[#fff5f0]',
     borderColor: 'border-[#ffd4b8]',
-    logo: (
-      <svg viewBox="0 0 80 40" className="h-6 w-auto" aria-label="Etsy">
-        <text x="2" y="32" fontSize="36" fontWeight="bold" fill="#f45800">Etsy</text>
-      </svg>
-    ),
+    logo: <EtsyLogo size={16} />,
   },
 }
 

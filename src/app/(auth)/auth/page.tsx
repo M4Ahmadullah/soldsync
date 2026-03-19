@@ -87,8 +87,13 @@ function AuthForm() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-block text-2xl font-bold tracking-tight text-[#f0ece6]">
-            Sold<span className="text-[#c97a40]">Sync</span>
+          <Link href="/" className="inline-flex items-center gap-2.5 text-[28px] font-bold tracking-tight text-[#f0ece6]">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 flex-shrink-0">
+              <path d="M8 14L14 20L14 8" stroke="#c97a40" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M24 18L18 12L18 24" stroke="#4a9d6e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="16" cy="16" r="2.5" fill="#f0ece6"/>
+            </svg>
+            <span>Sold<span className="text-[#c97a40]">Sync</span></span>
           </Link>
           <p className="mt-2 text-sm text-[#7a7268]">
             {tab === 'login' ? 'Welcome back.' : 'Start your free 7-day trial.'}

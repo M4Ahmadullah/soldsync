@@ -58,22 +58,28 @@ const cardVariants = {
 
 export default function BentoGrid() {
   return (
-    <section className="w-full max-w-6xl mx-auto px-6 py-24 border-t border-white/[0.05]">
-      <div className="text-center mb-14">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#c97a40] mb-3">Why SoldSync</p>
-        <h2 className="text-4xl font-bold text-[#f0ece6] mb-4 leading-tight">Built different from every other tool</h2>
+    <section className="w-full max-w-6xl mx-auto px-6 py-12 md:py-16 border-t border-white/[0.05]">
+      <motion.div
+        className="text-center mb-8"
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-72px' }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#c97a40] mb-2">Why SoldSync</p>
+        <h2 className="text-4xl font-bold text-[#f0ece6] mb-3 leading-tight">Built different from every other tool</h2>
         <p className="text-[#7a7268] max-w-xl mx-auto text-base leading-relaxed">
           Vendoo and List Perfectly poll on a schedule. SoldSync listens in real time.
           That gap costs you a sale — ours does not.
         </p>
-      </div>
+      </motion.div>
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-3"
+        className="grid grid-cols-1 md:grid-cols-3 gap-2"
       >
         {items.map((item) => {
           const Icon = item.icon
@@ -81,7 +87,7 @@ export default function BentoGrid() {
             <motion.div
               key={item.title}
               variants={cardVariants}
-              className={`group rounded-2xl border border-white/[0.07] bg-[#1e1d1b] p-7 relative overflow-hidden hover:border-white/[0.13] transition-colors duration-300 ${item.span}`}
+              className={`group rounded-2xl border border-white/[0.07] bg-[#1e1d1b] p-5 relative overflow-hidden hover:border-white/[0.13] transition-colors duration-300 ${item.span}`}
             >
               {/* Corner glow */}
               <div
@@ -91,7 +97,7 @@ export default function BentoGrid() {
 
               {/* Icon */}
               <div
-                className="relative z-10 mb-5 inline-flex p-3 rounded-xl border"
+                className="relative z-10 mb-4 inline-flex p-2.5 rounded-xl border"
                 style={{
                   backgroundColor: `${item.color}10`,
                   borderColor: `${item.color}25`,
@@ -100,8 +106,8 @@ export default function BentoGrid() {
                 <Icon className="w-5 h-5" style={{ color: item.color }} />
               </div>
 
-              <h3 className="text-[15px] font-semibold text-[#f0ece6] mb-2 relative z-10 leading-snug">{item.title}</h3>
-              <p className="text-sm text-[#6a6460] leading-relaxed relative z-10 mb-5">{item.description}</p>
+              <h3 className="text-sm font-semibold text-[#f0ece6] mb-1.5 relative z-10 leading-snug">{item.title}</h3>
+              <p className="text-xs text-[#6a6460] leading-relaxed relative z-10 mb-4">{item.description}</p>
 
               {/* Stat chip */}
               <div

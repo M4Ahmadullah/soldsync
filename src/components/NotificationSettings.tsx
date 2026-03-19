@@ -7,12 +7,18 @@ interface Prefs {
   email_on_failure: boolean
   email_on_no_match: boolean
   email_weekly_digest: boolean
+  price_sync_enabled: boolean
+  email_on_low_stock: boolean
+  low_stock_threshold: number
 }
 
 const DEFAULT_PREFS: Prefs = {
   email_on_failure: true,
   email_on_no_match: false,
   email_weekly_digest: false,
+  price_sync_enabled: false,
+  email_on_low_stock: true,
+  low_stock_threshold: 2,
 }
 
 const SETTINGS = [
@@ -32,6 +38,18 @@ const SETTINGS = [
     key: 'email_weekly_digest' as const,
     label: 'Weekly sync digest',
     description: 'A Sunday summary of your sync activity, success rate, and any issues.',
+    badge: null,
+  },
+  {
+    key: 'price_sync_enabled' as const,
+    label: 'Price sync',
+    description: 'Automatically update prices on Etsy and eBay when you change a price on Shopify.',
+    badge: 'New',
+  },
+  {
+    key: 'email_on_low_stock' as const,
+    label: 'Low stock alerts',
+    description: 'Get emailed when an item falls to your threshold quantity and is live on multiple platforms.',
     badge: null,
   },
 ]
@@ -104,6 +122,34 @@ export function NotificationSettings({ userId }: { userId: string }) {
           </button>
         </div>
       ))}
+
+      {/* Low stock threshold selector */}
+      {prefs.email_on_low_stock && (
+        <div className="flex items-center gap-4 rounded-xl border border-white/[0.07] bg-[#1a1916] px-4 py-3.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[#f0ece6]">Low stock threshold</p>
+            <p className="text-xs text-[#7a7268] mt-0.5">Alert when quantity falls to this number or below.</p>
+          </div>
+          <select
+            value={prefs.low_stock_threshold}
+            onChange={async (e) => {
+              const next = { ...prefs, low_stock_threshold: Number(e.target.value) }
+              setPrefs(next)
+              setSaving(true)
+              setSaved(false)
+              await supabase.from('profiles').update({ notification_prefs: next }).eq('id', userId)
+              setSaving(false)
+              setSaved(true)
+              setTimeout(() => setSaved(false), 2000)
+            }}
+            className="bg-[#2a2927] border border-white/[0.09] rounded-lg px-3 py-1.5 text-sm text-[#f0ece6] outline-none focus:border-white/[0.18] transition-colors"
+          >
+            {[1, 2, 3, 5, 10].map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <p className={`text-xs text-[#7a7268] pt-1 h-4 transition-opacity ${saved || saving ? 'opacity-100' : 'opacity-0'}`}>
         {saving ? 'Saving…' : 'Preferences saved ✓'}

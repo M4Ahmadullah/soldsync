@@ -70,6 +70,13 @@ export async function POST(request: NextRequest) {
 
   if (!connection) return NextResponse.json({ received: true })
 
+  // Update last_webhook_at for health tracking
+  await supabase
+    .from('connections')
+    .update({ last_webhook_at: new Date().toISOString() })
+    .eq('platform', 'ebay')
+    .eq('platform_user_id', ebayUserId)
+
   // Find all OTHER active connections for this user (the target platforms)
   const { data: targetConns } = await supabase
     .from('connections')

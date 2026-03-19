@@ -44,33 +44,33 @@ export default function HeroStats() {
       <div className="flex items-stretch gap-0">
 
         {/* Stat 1 */}
-        <div className="flex-1 pr-6">
-          <p className="text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
-            <span className="text-[#c97a40] text-[28px] font-semibold">&lt;</span>{syncVal}
-            <span className="text-[#c97a40] text-[22px] font-semibold">s</span>
+        <div className="flex-1 pr-4 sm:pr-6">
+          <p className="text-[26px] sm:text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
+            <span className="text-[#c97a40] text-[20px] sm:text-[28px] font-semibold">&lt;</span>{syncVal}
+            <span className="text-[#c97a40] text-[16px] sm:text-[22px] font-semibold">s</span>
           </p>
-          <p className="text-[11px] font-medium text-[#4a4540] mt-2 tracking-wide uppercase">Avg sync time</p>
+          <p className="text-[10px] sm:text-[11px] font-medium text-[#4a4540] mt-1.5 sm:mt-2 tracking-wide uppercase">Avg sync time</p>
         </div>
 
         <div className="w-px bg-white/[0.07] self-stretch" />
 
         {/* Stat 2 */}
-        <div className="flex-1 px-6">
-          <p className="text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
+        <div className="flex-1 px-4 sm:px-6">
+          <p className="text-[26px] sm:text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
             {platVal}
           </p>
-          <p className="text-[11px] font-medium text-[#4a4540] mt-2 tracking-wide uppercase">Platforms live</p>
+          <p className="text-[10px] sm:text-[11px] font-medium text-[#4a4540] mt-1.5 sm:mt-2 tracking-wide uppercase">Platforms live</p>
         </div>
 
         <div className="w-px bg-white/[0.07] self-stretch" />
 
         {/* Stat 3 */}
-        <div className="flex-1 pl-6">
-          <p className="text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
+        <div className="flex-1 pl-4 sm:pl-6">
+          <p className="text-[26px] sm:text-[38px] font-bold text-[#f0ece6] leading-none tabular-nums tracking-tight">
             {(upVal / 10).toFixed(1)}
-            <span className="text-[#c97a40] text-[22px] font-semibold">%</span>
+            <span className="text-[#c97a40] text-[16px] sm:text-[22px] font-semibold">%</span>
           </p>
-          <p className="text-[11px] font-medium text-[#4a4540] mt-2 tracking-wide uppercase">Uptime</p>
+          <p className="text-[10px] sm:text-[11px] font-medium text-[#4a4540] mt-1.5 sm:mt-2 tracking-wide uppercase">Uptime</p>
         </div>
 
       </div>

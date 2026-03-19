@@ -167,8 +167,13 @@ function ResetContent() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Link href="/" className="text-2xl font-bold">
-            Sold<span className="text-emerald-500">Sync</span>
+          <Link href="/" className="inline-flex items-center gap-2.5 text-[28px] font-bold">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 flex-shrink-0">
+              <path d="M8 14L14 20L14 8" stroke="#c97a40" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M24 18L18 12L18 24" stroke="#4a9d6e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="16" cy="16" r="2.5" fill="#f0ece6"/>
+            </svg>
+            <span>Sold<span className="text-emerald-500">Sync</span></span>
           </Link>
           <p className="mt-2 text-sm text-zinc-500">
             {isUpdate ? 'Choose a new password.' : 'Reset your password.'}

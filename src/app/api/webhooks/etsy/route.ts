@@ -78,6 +78,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unknown shop' }, { status: 404 })
   }
 
+  // Update last_webhook_at for health tracking
+  await supabase
+    .from('connections')
+    .update({ last_webhook_at: new Date().toISOString() })
+    .eq('platform', 'etsy')
+    .eq('platform_user_id', shopId)
+
   // Find all OTHER active connections for this user (the target platforms)
   const { data: targetConns } = await supabase
     .from('connections')

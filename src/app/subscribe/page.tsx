@@ -101,7 +101,11 @@ export default function SubscribePage() {
         <div className="mb-12 text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-8 group">
             <div className="w-6 h-6 rounded-md bg-[#c97a40]/15 border border-[#c97a40]/25 flex items-center justify-center">
-              <RefreshCw className="w-3 h-3 text-[#c97a40]" />
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5">
+                <path d="M9 14L14 18L14 9" stroke="#c97a40" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <path d="M23 18L18 14L18 23" stroke="#4a9d6e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <circle cx="16" cy="16" r="2" fill="#f0ece6"/>
+              </svg>
             </div>
             <span className="text-lg font-bold tracking-tight">
               Sold<span className="text-[#c97a40]">Sync</span>

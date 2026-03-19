@@ -3,7 +3,6 @@ import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Client as QStashClient } from '@upstash/qstash'
 
-// Verify Shopify HMAC signature
 function verifyShopifyHmac(body: string, signature: string): boolean {
   const secret = process.env.SHOPIFY_CLIENT_SECRET
   if (!secret) return false
@@ -21,25 +20,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  const supabase = createServiceClient()
-
-  // Log the raw event
-  await supabase.from('webhook_events').insert({
-    platform: 'shopify',
-    event_type: topic,
-    raw_payload: JSON.parse(body),
-    signature_valid: true,
-    processed: false,
-  })
-
-  // Only handle order creation
-  if (topic !== 'orders/create') {
+  if (topic !== 'products/update') {
     return NextResponse.json({ received: true })
   }
 
-  const payload = JSON.parse(body)
+  const payload = JSON.parse(body) as {
+    id: number
+    title: string
+    variants?: Array<{ price: string }>
+  }
 
-  // Find the user by shop domain
+  const newPrice = parseFloat(payload.variants?.[0]?.price ?? '0')
+  if (!newPrice || !payload.title) {
+    return NextResponse.json({ received: true })
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('[MOCK] Shopify price webhook:', { shopDomain, title: payload.title, newPrice })
+    return NextResponse.json({ received: true })
+  }
+
+  const supabase = createServiceClient()
+
   const { data: conn } = await supabase
     .from('connections')
     .select('user_id')
@@ -50,33 +52,30 @@ export async function POST(request: NextRequest) {
 
   if (!conn) return NextResponse.json({ received: true })
 
-  // Update last_webhook_at for health tracking
-  await supabase
+  const { data: targetConns } = await supabase
     .from('connections')
-    .update({ last_webhook_at: new Date().toISOString() })
-    .eq('platform', 'shopify')
-    .eq('platform_user_id', shopDomain)
+    .select('platform')
+    .eq('user_id', conn.user_id)
+    .eq('is_active', true)
+    .neq('platform', 'shopify')
 
-  // Queue a sync job for each line item
+  if (!targetConns?.length) return NextResponse.json({ received: true })
+
   const qstash = new QStashClient({ token: process.env.QSTASH_TOKEN! })
 
-  for (const item of payload.line_items ?? []) {
-    const title = item.title
-    if (!title) continue
-
-    for (const targetPlatform of ['etsy', 'ebay']) {
-      await qstash.publishJSON({
-        url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sync/process`,
-        body: {
-          user_id: conn.user_id,
-          source_platform: 'shopify',
-          target_platform: targetPlatform,
-          listing_title: title,
-          source_listing_id: String(item.id ?? ''),
-        },
-        retries: 3,
-      })
-    }
+  for (const target of targetConns) {
+    await qstash.publishJSON({
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sync/price`,
+      body: {
+        user_id: conn.user_id,
+        source_platform: 'shopify',
+        target_platform: target.platform,
+        listing_title: payload.title,
+        new_price: newPrice,
+        source_product_id: String(payload.id),
+      },
+      retries: 3,
+    })
   }
 
   return NextResponse.json({ received: true })

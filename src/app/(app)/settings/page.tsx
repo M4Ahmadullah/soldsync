@@ -40,9 +40,16 @@ export default async function SettingsPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <span className="text-base font-semibold text-[#f0ece6]">
-            Sold<span className="text-[#c97a40]">Sync</span>
-          </span>
+          <div className="flex items-center gap-3">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 flex-shrink-0">
+              <path d="M8 14L14 20L14 8" stroke="#c97a40" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M24 18L18 12L18 24" stroke="#4a9d6e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="16" cy="16" r="2.5" fill="#f0ece6"/>
+            </svg>
+            <span className="text-[22px] font-semibold text-[#f0ece6]">
+              Sold<span className="text-[#c97a40]">Sync</span>
+            </span>
+          </div>
         </div>
       </header>
 

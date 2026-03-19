@@ -54,7 +54,7 @@ CREATE TRIGGER on_auth_user_created
 CREATE TABLE IF NOT EXISTS public.connections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  platform TEXT NOT NULL CHECK (platform IN ('ebay', 'etsy', 'depop', 'poshmark')),
+  platform TEXT NOT NULL CHECK (platform IN ('shopify', 'ebay', 'etsy', 'depop', 'poshmark', 'mercari', 'vinted')),
   platform_user_id TEXT NOT NULL,
   platform_username TEXT,
   access_token TEXT NOT NULL,
@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS public.connections (
   token_expires_at TIMESTAMPTZ,
   webhook_id TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  last_webhook_at TIMESTAMPTZ,
+  webhook_last_verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, platform)
@@ -77,6 +79,18 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_connections_user ON public.connections(user_id);
 CREATE INDEX IF NOT EXISTS idx_connections_platform_user ON public.connections(platform, platform_user_id);
+
+-- Add new columns to existing connections table (idempotent)
+ALTER TABLE public.connections ADD COLUMN IF NOT EXISTS last_webhook_at TIMESTAMPTZ;
+ALTER TABLE public.connections ADD COLUMN IF NOT EXISTS webhook_last_verified_at TIMESTAMPTZ;
+
+-- Fix platform CHECK constraint to include shopify (drop and recreate)
+DO $$ BEGIN
+  ALTER TABLE public.connections DROP CONSTRAINT IF EXISTS connections_platform_check;
+  ALTER TABLE public.connections ADD CONSTRAINT connections_platform_check
+    CHECK (platform IN ('shopify', 'ebay', 'etsy', 'depop', 'poshmark', 'mercari', 'vinted'));
+EXCEPTION WHEN others THEN NULL;
+END $$;
 
 -- 004: Sync Logs (immutable record of every sync event)
 CREATE TABLE IF NOT EXISTS public.sync_logs (
@@ -117,9 +131,62 @@ CREATE TABLE IF NOT EXISTS public.webhook_events (
 
 CREATE INDEX IF NOT EXISTS idx_webhook_events_platform ON public.webhook_events(platform, created_at DESC);
 
--- 006: Notification preferences column
+-- 006: Price Sync Logs
+CREATE TABLE IF NOT EXISTS public.price_sync_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source_platform TEXT NOT NULL,
+  listing_title TEXT NOT NULL,
+  old_price NUMERIC(10,2),
+  new_price NUMERIC(10,2) NOT NULL,
+  targets_updated JSONB NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL CHECK (status IN ('success', 'partial', 'failed', 'no_match')),
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.price_sync_logs ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='price_sync_logs' AND policyname='price_sync_logs_select_own') THEN
+    CREATE POLICY "price_sync_logs_select_own" ON public.price_sync_logs FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_price_sync_logs_user ON public.price_sync_logs(user_id, created_at DESC);
+
+-- 007: Stock Snapshots (daily low-stock tracking)
+CREATE TABLE IF NOT EXISTS public.stock_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  listing_id TEXT NOT NULL,
+  listing_title TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  alerted BOOLEAN NOT NULL DEFAULT FALSE,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.stock_snapshots ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='stock_snapshots' AND policyname='stock_snapshots_select_own') THEN
+    CREATE POLICY "stock_snapshots_select_own" ON public.stock_snapshots FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_stock_snapshots_user ON public.stock_snapshots(user_id, platform, listing_id);
+
+-- 008: Notification preferences column (with full defaults including low stock)
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS notification_prefs JSONB NOT NULL DEFAULT '{"email_on_failure":true,"email_on_no_match":false,"email_weekly_digest":false}'::jsonb;
+  ADD COLUMN IF NOT EXISTS notification_prefs JSONB NOT NULL DEFAULT '{
+    "email_on_failure": true,
+    "email_on_no_match": false,
+    "email_weekly_digest": false,
+    "email_on_low_stock": true,
+    "low_stock_threshold": 2,
+    "price_sync_enabled": false
+  }'::jsonb;
 
 -- Done.
 SELECT 'Schema applied successfully' AS status;

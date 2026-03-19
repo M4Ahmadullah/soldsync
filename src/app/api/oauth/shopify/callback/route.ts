@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { encryptToken } from '@/lib/tokens'
-import { registerShopifyWebhook } from '@/lib/shopify/webhook'
+import { registerShopifyWebhook, registerShopifyProductsWebhook } from '@/lib/shopify/webhook'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -61,6 +61,11 @@ export async function GET(request: NextRequest) {
       .update({ webhook_id: webhookId, updated_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('platform', 'shopify')
+
+    // Register products/update webhook for price sync
+    await registerShopifyProductsWebhook(access_token, shop).catch((err) => {
+      console.error('[Shopify] Failed to register products/update webhook:', err)
+    })
 
     const response = NextResponse.redirect(new URL('/dashboard', request.url))
     response.cookies.delete('shopify_oauth_state')

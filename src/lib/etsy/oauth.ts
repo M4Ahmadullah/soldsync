@@ -3,7 +3,7 @@ import crypto from 'crypto'
 const ETSY_AUTH_URL = 'https://www.etsy.com/oauth/connect'
 const ETSY_TOKEN_URL = 'https://api.etsy.com/v3/public/oauth/token'
 
-const SCOPES = ['listings_r', 'listings_w', 'transactions_r'].join(' ')
+const SCOPES = ['listings_r', 'listings_w', 'listings_d', 'transactions_r'].join(' ')
 
 export function generatePKCE(): { verifier: string; challenge: string } {
   const verifier = crypto.randomBytes(64).toString('base64url').slice(0, 128)

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
+import { ShopifyLogo, EbayLogo, EtsyLogo } from './PlatformLogos'
 
 type Phase = 'idle' | 'sale' | 'syncing' | 'complete'
 
@@ -100,9 +101,9 @@ function AnimPath({
 // ── Platform data ─────────────────────────────────────────────────────────────
 
 const PLAT = {
-  shopify: { label: 'Shopify', price: '$199', color: '#6da84a' },
-  ebay:    { label: 'eBay',    price: '$189', color: '#5b8fc4' },
-  etsy:    { label: 'Etsy',    price: '$195', color: '#c97a40' },
+  shopify: { label: 'Shopify', price: '$199', color: '#95bf47', Logo: ShopifyLogo },
+  ebay:    { label: 'eBay',    price: '$189', color: '#e53238', Logo: EbayLogo },
+  etsy:    { label: 'Etsy',    price: '$195', color: '#f1641e', Logo: EtsyLogo },
 }
 
 // ── Platform card ─────────────────────────────────────────────────────────────
@@ -200,17 +201,23 @@ function PlatCard({
             <span className="text-[12px] font-bold" style={{ color: ended ? '#3a3530' : '#f0ece6' }}>
               {p.price}
             </span>
-            <motion.span
+            <motion.div
               animate={{
                 backgroundColor: ended     ? '#c0554e12' : delisting ? '#c97a4012' : p.color + '14',
                 color:           ended     ? '#c0554e'   : delisting ? '#c97a40'   : p.color,
                 borderColor:     ended     ? '#c0554e30' : delisting ? '#c97a4030' : p.color + '30',
               }}
               transition={{ duration: 0.25 }}
-              className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full border whitespace-nowrap"
+              className="px-1.5 py-0.5 rounded-full border whitespace-nowrap flex items-center"
             >
-              {ended ? 'Ended' : delisting ? 'Delisting…' : p.label}
-            </motion.span>
+              {ended ? (
+                <span className="text-[8px] font-bold uppercase tracking-widest">Ended</span>
+              ) : delisting ? (
+                <span className="text-[8px] font-bold uppercase tracking-widest">Delisting…</span>
+              ) : (
+                <p.Logo size={10} />
+              )}
+            </motion.div>
           </div>
         </div>
       </motion.div>

@@ -1,8 +1,19 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800', '900'],
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-mono',
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'SoldSync — Stop Double-Sales Instantly',
@@ -14,7 +25,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased bg-[#1a1916] text-[#f0ece6] overflow-x-hidden`}>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+      </head>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-[#1a1916] text-[#f0ece6] overflow-x-hidden`}>
         {children}
       </body>
     </html>

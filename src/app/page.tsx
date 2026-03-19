@@ -1,11 +1,15 @@
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Zap, ShieldCheck, ChevronDown, Minus, RefreshCw, Link2, Tag, XCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Zap, ShieldCheck, ChevronDown, Minus, RefreshCw, Link2, Tag, LayoutDashboard } from 'lucide-react'
 import IntegrationMarquee from '@/components/IntegrationMarquee'
 import BentoGrid from '@/components/BentoGrid'
 import SyncFlowDemo from '@/components/SyncFlowDemo'
 import Testimonials from '@/components/Testimonials'
 import HeroStats from '@/components/HeroStats'
-import ComparisonSection from '@/components/ComparisonSection'
+import FeatureShowcase from '@/components/FeatureShowcase'
+import FAQSection from '@/components/FAQSection'
+import ScrollReveal from '@/components/ScrollReveal'
+import MobileNav from '@/components/MobileNav'
+import { createClient } from '@/lib/supabase/server'
 
 // ── Shared layout token ────────────────────────────────────────────────────
 // Every content section uses max-w-6xl + px-6 + py-24 + border-t border-white/[0.05]
@@ -74,8 +78,10 @@ const PLANS = [
       'Real-time webhook processing',
       'Failure email alerts',
       'Activity log (7-day history)',
+      'Platform health monitoring',
+      'Manual delist button',
     ],
-    missing: ['All 3 platforms', 'No-match alerts', 'Weekly digest', 'Priority support'],
+    missing: ['All 3 platforms', 'Price sync', 'Low stock alerts', 'No-match alerts', 'Weekly digest', 'Priority support'],
     cta: 'Start free trial',
     highlight: false,
     accent: '#7a7268',
@@ -96,6 +102,10 @@ const PLANS = [
       'Weekly sync digest email',
       'Full activity log (30-day history)',
       'AES-256 encrypted token storage',
+      'Platform health monitoring',
+      'Automatic price sync across platforms',
+      'Low stock alerts (configurable)',
+      'Manual delist everywhere',
     ],
     missing: ['Priority support', 'Unlimited syncs'],
     cta: 'Start free trial',
@@ -119,7 +129,12 @@ const PLANS = [
       'Weekly sync digest email',
       'Full activity log (90-day history)',
       'AES-256 encrypted token storage',
+      'Platform health monitoring',
+      'Automatic price sync across all platforms',
+      'Low stock alerts with custom thresholds',
+      'Manual delist everywhere',
       'Priority email support',
+      'Webhook watchdog (daily re-registration)',
     ],
     missing: [],
     cta: 'Start free trial',
@@ -128,113 +143,115 @@ const PLANS = [
   },
 ]
 
-const FAQ = [
-  {
-    q: 'What if my listing titles are slightly different across platforms?',
-    a: 'SoldSync uses fuzzy title matching (Jaro-Winkler ≥90% similarity). Minor spacing, capitalisation, or punctuation differences are handled automatically. For best results, keep titles at least 90% identical across platforms.',
-  },
-  {
-    q: 'Does SoldSync create, edit, or price my listings?',
-    a: 'No. SoldSync is single-purpose: it removes a listing the instant the item sells elsewhere. It never creates, edits, reprices, or publishes listings.',
-  },
-  {
-    q: 'What happens if I exceed my monthly sync limit?',
-    a: 'On Starter and Pro, syncs pause until the next billing cycle or you upgrade. You will receive an email warning when you reach 80% of your limit so you can act before any gaps.',
-  },
-  {
-    q: 'How is SoldSync different from Vendoo or List Perfectly?',
-    a: 'Vendoo and List Perfectly poll on a schedule — if your item sells between polls, you get a double-sale. SoldSync uses real-time webhooks: when a sale happens, we know in under a second. No polling gap, no window of exposure.',
-  },
-  {
-    q: 'Which platforms are supported right now?',
-    a: 'Shopify, eBay, and Etsy are live. Depop and Poshmark are next on the roadmap.',
-  },
-  {
-    q: 'Is my OAuth token data secure?',
-    a: 'All OAuth tokens are stored AES-256-GCM encrypted at rest. They are never logged, never exposed client-side, and never shared with third parties. Database access is protected by Row Level Security.',
-  },
-  {
-    q: 'Can I cancel at any time?',
-    a: 'Yes. Cancel instantly through the Stripe Customer Portal. Access continues until the end of your current billing period. No penalties, no questions.',
-  },
-]
 
 // ── Components ─────────────────────────────────────────────────────────────
 
 function SectionHeader({ eyebrow, heading, sub }: { eyebrow: string; heading: string; sub: string }) {
   return (
-    <div className="text-center mb-16">
+    <div className="text-center mb-10 md:mb-16">
       <p className="text-xs font-semibold uppercase tracking-widest text-[#c97a40] mb-3">{eyebrow}</p>
-      <h2 className="text-4xl font-bold text-[#f0ece6] mb-4 leading-tight">{heading}</h2>
-      <p className="text-[#7a7268] text-base max-w-xl mx-auto leading-relaxed">{sub}</p>
+      <h2 className="text-3xl sm:text-4xl font-bold text-[#f0ece6] mb-4 leading-tight">{heading}</h2>
+      <p className="text-[#7a7268] text-sm sm:text-base max-w-xl mx-auto leading-relaxed">{sub}</p>
     </div>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Fetch auth state + plan server-side — no client JS needed
+  let user = null
+  let userPlan: string | null = null
+  try {
+    const supabase = await createClient()
+    const { data: { user: u } } = await supabase.auth.getUser()
+    user = u
+    if (u) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_status, stripe_customer_id')
+        .eq('id', u.id)
+        .single()
+      // Map subscription_status to plan id — store this in metadata ideally; for now infer from status
+      userPlan = profile?.subscription_status ?? null
+    }
+  } catch { /* fail gracefully — show logged-out view */ }
+
+  const isLoggedIn = !!user
+
   return (
     <div className="min-h-screen bg-[#1a1916] text-[#f0ece6] overflow-x-hidden">
 
-      {/* ── ANNOUNCEMENT BAR ── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2.5 bg-[#1e1a15] border-b border-[#c97a40]/20 py-2 px-4" style={{ minHeight: '36px' }}>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#c97a40] animate-pulse shrink-0" />
-        <p className="text-[11px] text-[#c97a40]/80 text-center leading-none">
-          <span className="font-semibold text-[#c97a40]">Limited launch pricing</span> — lock in your rate before it goes up
-        </p>
-        <Link href="/auth?tab=signup" className="text-[11px] font-bold text-[#f0ece6] bg-[#c97a40] hover:bg-[#b86c34] transition-colors px-2.5 py-0.5 rounded-md whitespace-nowrap">
-          Claim now
-        </Link>
-      </div>
+      {/* ── ANNOUNCEMENT BAR — hidden for logged-in users ── */}
+      {!isLoggedIn && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-9 flex items-center justify-center gap-2 bg-[#1e1a15] border-b border-[#c97a40]/20 px-3 overflow-hidden">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#c97a40] animate-pulse shrink-0" />
+          <p className="text-[11px] text-[#c97a40]/80 text-center leading-none">
+            <span className="font-semibold text-[#c97a40]">Limited launch pricing</span> — lock in your rate before it goes up
+          </p>
+          <Link href="/auth?tab=signup" className="text-[11px] font-bold text-[#f0ece6] bg-[#c97a40] hover:bg-[#b86c34] transition-colors px-2.5 py-0.5 rounded-md whitespace-nowrap">
+            Claim now
+          </Link>
+        </div>
+      )}
 
       {/* ── NAV ── */}
-      <header className="fixed top-[36px] left-0 right-0 z-40 border-b border-white/[0.06] bg-[#1a1916]/95 backdrop-blur-xl">
-        <div className={`${W} relative flex items-center justify-between`} style={{ height: '58px' }}>
-          {/* Logo mark + wordmark */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-lg bg-[#c97a40]/15 border border-[#c97a40]/25 flex items-center justify-center group-hover:bg-[#c97a40]/22 transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 text-[#c97a40]" />
+      <header className={`fixed ${isLoggedIn ? 'top-0' : 'top-[36px]'} left-0 right-0 z-40 border-b border-white/[0.06] bg-[#1a1916]/95 backdrop-blur-xl`}>
+        <div className={`${W} relative flex items-center justify-between`} style={{ height: '72px' }}>
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-4 group">
+            <svg width="56" height="56" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-14 h-14 flex-shrink-0">
+              {/* Synced arrows icon - larger and bolder */}
+              <path d="M8 14L14 20L14 8" stroke="#c97a40" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M24 18L18 12L18 24" stroke="#4a9d6e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="16" cy="16" r="2.5" fill="#f0ece6"/>
+            </svg>
+            <div className="flex flex-col items-start">
+              <span className="text-[32px] font-bold tracking-tight leading-none">
+                Sold<span className="text-[#c97a40]">Sync</span>
+              </span>
+              <span className="text-[10px] text-[#7a7268] font-medium tracking-widest mt-1">FROM XEQUTIVE TECH LTD</span>
             </div>
-            <span className="text-[15px] font-bold tracking-tight">
-              Sold<span className="text-[#c97a40]">Sync</span>
-            </span>
           </Link>
 
-          {/* Center nav — absolutely centered so it's always at true midpoint */}
+          {/* Center nav */}
           <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
             {NAV_LINKS.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                className="text-sm text-[#6a6460] hover:text-[#b8b0a6] transition-colors px-3.5 py-2 rounded-lg hover:bg-white/[0.04]"
-              >
+              <a key={l.label} href={l.href}
+                className="text-sm text-[#6a6460] hover:text-[#b8b0a6] transition-colors px-3.5 py-2 rounded-lg hover:bg-white/[0.04]">
                 {l.label}
               </a>
             ))}
           </nav>
 
-          {/* Right actions */}
+          {/* Right actions — auth-aware */}
           <div className="flex items-center gap-2">
-            <Link
-              href="/auth"
-              className="hidden sm:block text-sm text-[#6a6460] hover:text-[#b8b0a6] transition-colors px-3 py-2 rounded-lg hover:bg-white/[0.04]"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/auth?tab=signup"
-              className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white transition-all shadow-sm shadow-[#c97a40]/25"
-            >
-              <Zap className="w-3 h-3" />
-              Start free
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard"
+                className="hidden md:flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white transition-all shadow-sm shadow-[#c97a40]/25">
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth"
+                  className="hidden md:block text-sm text-[#6a6460] hover:text-[#b8b0a6] transition-colors px-3 py-2 rounded-lg hover:bg-white/[0.04]">
+                  Sign in
+                </Link>
+                <Link href="/auth?tab=signup"
+                  className="hidden md:flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white transition-all shadow-sm shadow-[#c97a40]/25">
+                  <Zap className="w-3 h-3" />
+                  Start free
+                </Link>
+              </>
+            )}
+            <MobileNav isLoggedIn={isLoggedIn} />
           </div>
         </div>
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center pt-[94px] overflow-hidden">
+      <section className="relative min-h-screen flex flex-col justify-center pt-[94px] overflow-hidden">
         {/* Background */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute right-0 top-0 w-[700px] h-[700px] bg-[#c97a40]/[0.04] rounded-full blur-[180px] -mr-40 -mt-20" />
@@ -259,7 +276,7 @@ export default function LandingPage() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-[44px] sm:text-[52px] xl:text-[60px] font-bold tracking-tight leading-[1.06] mb-5">
+            <h1 className="text-[34px] sm:text-[44px] xl:text-[60px] font-bold tracking-tight leading-[1.06] mb-5">
               Sell everywhere.<br />
               Ship once.<br />
               <span className="text-gradient">Never oversell.</span>
@@ -272,13 +289,24 @@ export default function LandingPage() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mb-10 w-full sm:w-auto">
-              <Link
-                href="/auth?tab=signup"
-                className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#c97a40] hover:bg-[#b86c34] text-white font-semibold text-[14px] transition-all shadow-lg shadow-[#c97a40]/20"
-              >
-                Start free — 7 days
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#c97a40] hover:bg-[#b86c34] text-white font-semibold text-[14px] transition-all shadow-lg shadow-[#c97a40]/20"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Go to dashboard
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              ) : (
+                <Link
+                  href="/auth?tab=signup"
+                  className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#c97a40] hover:bg-[#b86c34] text-white font-semibold text-[14px] transition-all shadow-lg shadow-[#c97a40]/20"
+                >
+                  Start free — 7 days
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              )}
               <a
                 href="#how-it-works"
                 className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/[0.10] bg-white/[0.03] hover:bg-white/[0.06] text-[#9a9188] font-medium text-[14px] transition-all"
@@ -363,9 +391,17 @@ export default function LandingPage() {
         </div>
 
         {/* Mobile: show demo below text */}
-        <div className="lg:hidden w-full border-t border-white/[0.05] py-10 px-6 flex flex-col items-center gap-4">
+        <div className="lg:hidden w-full border-t border-white/[0.05] py-8 flex flex-col items-center gap-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#4a4540]">Live demo</p>
-          <SyncFlowDemo />
+          {/* Scale SyncFlowDemo (440px wide) to fit mobile screens */}
+          <div className="w-full overflow-hidden flex justify-center">
+            <div
+              className="shrink-0 origin-top scale-[0.72] sm:scale-[0.90] md:scale-100 mb-[-131px] sm:mb-[-47px] md:mb-0"
+              style={{ width: 440, height: 468 }}
+            >
+              <SyncFlowDemo />
+            </div>
+          </div>
         </div>
 
         <a href="#comparison" className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[#3a3530] hover:text-[#6a6460] transition-colors animate-bounce">
@@ -376,26 +412,18 @@ export default function LandingPage() {
       {/* ── MARQUEE ── */}
       <IntegrationMarquee />
 
-      {/* ── COMPARISON ── */}
-      <section id="comparison" className="py-24 border-t border-white/[0.05]">
+      {/* ── CAPABILITIES ── */}
+      <section id="comparison" className="py-16 md:py-24 border-t border-white/[0.05]">
         <div className={W}>
-          <SectionHeader
-            eyebrow="The problem"
-            heading="An 8-minute window for disaster"
-            sub="Polling tools check for sales every few minutes. That gap is all it takes for two buyers to claim the same item."
-          />
+          <ScrollReveal>
+            <SectionHeader
+              eyebrow="Five powerful features"
+              heading="Everything you need to scale"
+              sub="Each feature solves a specific pain point. Click through to see them in action."
+            />
+          </ScrollReveal>
 
-          {/* Gap callout */}
-          <div className="flex items-center justify-center gap-4 mb-10">
-            <div className="h-px flex-1 max-w-[120px] bg-gradient-to-r from-transparent to-[#c0554e]/30" />
-            <div className="flex items-center gap-2.5 px-4 py-2 rounded-full border border-[#c0554e]/20 bg-[#c0554e]/6">
-              <XCircle className="w-3.5 h-3.5 text-[#c0554e]/70" />
-              <span className="text-xs font-semibold text-[#c0554e]/80">Average polling gap: 5–15 minutes of exposure</span>
-            </div>
-            <div className="h-px flex-1 max-w-[120px] bg-gradient-to-l from-transparent to-[#c0554e]/30" />
-          </div>
-
-          <ComparisonSection />
+          <FeatureShowcase />
         </div>
       </section>
 
@@ -403,16 +431,19 @@ export default function LandingPage() {
       <BentoGrid />
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="py-24 border-t border-white/[0.05]">
+      <section id="how-it-works" className="py-16 md:py-24 border-t border-white/[0.05]">
         <div className={W}>
+          <ScrollReveal>
           <SectionHeader
             eyebrow="Setup"
             heading="Running in 5 minutes. Works forever."
             sub="Three steps. Zero ongoing effort. No polling, no maintenance, no manual anything."
           />
+          </ScrollReveal>
           <div className="grid md:grid-cols-3 gap-4">
             {STEPS.map((step, i) => (
-              <div key={step.n} className="rounded-2xl border border-white/[0.07] bg-[#1e1d1b] p-7 relative overflow-hidden flex flex-col gap-5">
+              <ScrollReveal key={step.n} delay={i * 0.12}>
+              <div className="rounded-2xl border border-white/[0.07] bg-[#1e1d1b] p-7 relative overflow-hidden flex flex-col gap-5">
                 {/* Big background step number */}
                 <span
                   className="absolute top-3 right-5 text-[72px] font-black leading-none select-none pointer-events-none"
@@ -445,100 +476,125 @@ export default function LandingPage() {
                   <p className="text-sm text-[#6a6460] leading-relaxed">{step.body}</p>
                 </div>
               </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
+
       {/* ── PRICING ── */}
-      <section id="pricing" className="py-24 border-t border-white/[0.05]">
+      <section id="pricing" className="py-16 md:py-24 border-t border-white/[0.05]">
         <div className={W}>
+          <ScrollReveal>
           <SectionHeader
             eyebrow="Pricing"
             heading="Simple, honest pricing"
-            sub="Start free for 7 days. Pick the plan that fits your volume. Upgrade or cancel anytime."
+            sub={isLoggedIn
+              ? "You're in. Upgrade anytime to unlock more syncs and features."
+              : "Start free for 7 days. Pick the plan that fits your volume. Upgrade or cancel anytime."}
           />
+          </ScrollReveal>
 
           <div className="grid md:grid-cols-3 gap-5 items-stretch">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl flex flex-col overflow-hidden transition-all ${
-                  plan.highlight
-                    ? 'border-2 border-[#c97a40]/40 bg-[#221f1b] shadow-[0_0_0_1px_rgba(201,122,64,0.1),0_16px_48px_rgba(0,0,0,0.5)]'
-                    : 'border border-white/[0.07] bg-[#212120]'
-                }`}
-              >
-                {/* Top accent line for highlighted plan */}
-                {plan.highlight && (
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#c97a40]/60 to-transparent" />
-                )}
+            {PLANS.map((plan, pi) => {
+              const isSubscribed = userPlan === 'active' || userPlan === 'trialing'
+              // For logged-in subscribed users: show "Manage billing"; for logged-in unsubscribed: link to /subscribe; for logged-out: link to /auth
+              let ctaHref = '/auth?tab=signup'
+              let ctaLabel = plan.cta
+              if (isLoggedIn) {
+                if (isSubscribed) {
+                  ctaHref = '/settings'
+                  ctaLabel = 'Manage billing'
+                } else {
+                  ctaHref = '/subscribe'
+                  ctaLabel = 'Subscribe'
+                }
+              }
 
-                {/* Popular badge */}
-                {plan.badge && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#c97a40]/15 border border-[#c97a40]/25 text-[#c97a40] text-[10px] font-bold uppercase tracking-wider">
-                      <Zap className="w-2.5 h-2.5" />
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+              return (
+                <ScrollReveal key={plan.name} delay={pi * 0.1}>
+                <div
+                  className={`relative rounded-2xl flex flex-col overflow-hidden transition-all h-full ${
+                    plan.highlight
+                      ? 'border-2 border-[#c97a40]/40 bg-[#221f1b] shadow-[0_0_0_1px_rgba(201,122,64,0.1),0_16px_48px_rgba(0,0,0,0.5)]'
+                      : 'border border-white/[0.07] bg-[#212120]'
+                  }`}
+                >
+                  {/* Top accent line for highlighted plan */}
+                  {plan.highlight && (
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#c97a40]/60 to-transparent" />
+                  )}
 
-                <div className="p-7 flex flex-col flex-1">
-                  {/* Header */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-bold text-[#f0ece6] mb-1">{plan.name}</h3>
-                    <p className="text-xs text-[#4a4540] leading-relaxed mb-5">{plan.description}</p>
-                    <div className="flex items-end gap-1">
-                      <span className="text-4xl font-bold text-[#f0ece6]">{plan.price}</span>
-                      <span className="text-[#4a4540] mb-1 text-sm">{plan.period}</span>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border"
-                        style={{ color: plan.accent, borderColor: `${plan.accent}30`, backgroundColor: `${plan.accent}10` }}>
-                        {plan.syncs}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border"
-                        style={{ color: plan.accent, borderColor: `${plan.accent}30`, backgroundColor: `${plan.accent}10` }}>
-                        {plan.platforms}
+                  {/* Badge — "Most popular" or hidden if subscribed */}
+                  {plan.badge && !isSubscribed && (
+                    <div className="absolute top-4 right-4">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#c97a40]/15 border border-[#c97a40]/25 text-[#c97a40] text-[10px] font-bold uppercase tracking-wider">
+                        <Zap className="w-2.5 h-2.5" />
+                        {plan.badge}
                       </span>
                     </div>
+                  )}
+
+                  <div className="p-7 flex flex-col flex-1">
+                    {/* Header */}
+                    <div className="mb-6">
+                      <h3 className="text-base font-bold text-[#f0ece6] mb-1">{plan.name}</h3>
+                      <p className="text-xs text-[#4a4540] leading-relaxed mb-5">{plan.description}</p>
+                      <div className="flex items-end gap-1">
+                        <span className="text-4xl font-bold text-[#f0ece6]">{plan.price}</span>
+                        <span className="text-[#4a4540] mb-1 text-sm">{plan.period}</span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border"
+                          style={{ color: plan.accent, borderColor: `${plan.accent}30`, backgroundColor: `${plan.accent}10` }}>
+                          {plan.syncs}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border"
+                          style={{ color: plan.accent, borderColor: `${plan.accent}30`, backgroundColor: `${plan.accent}10` }}>
+                          {plan.platforms}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="space-y-2.5 mb-6 flex-1">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2.5 text-sm text-[#b8b0a6]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#4a9d6e] shrink-0 mt-0.5" />
+                          {f}
+                        </li>
+                      ))}
+                      {plan.missing.map((f) => (
+                        <li key={f} className="flex items-start gap-2.5 text-sm text-[#3a3530]">
+                          <Minus className="w-3.5 h-3.5 text-[#2e2c28] shrink-0 mt-0.5" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      href={ctaHref}
+                      className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        plan.highlight
+                          ? 'bg-[#c97a40] hover:bg-[#b86c34] text-white'
+                          : 'bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-[#b8b0a6]'
+                      }`}
+                    >
+                      {ctaLabel}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
-
-                  {/* Features */}
-                  <ul className="space-y-2.5 mb-6 flex-1">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm text-[#b8b0a6]">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#4a9d6e] shrink-0 mt-0.5" />
-                        {f}
-                      </li>
-                    ))}
-                    {plan.missing.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm text-[#3a3530]">
-                        <Minus className="w-3.5 h-3.5 text-[#2e2c28] shrink-0 mt-0.5" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    href="/auth?tab=signup"
-                    className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-medium transition-all ${
-                      plan.highlight
-                        ? 'bg-[#c97a40] hover:bg-[#b86c34] text-white'
-                        : 'bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-[#b8b0a6]'
-                    }`}
-                  >
-                    {plan.cta}
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
                 </div>
-              </div>
-            ))}
+                </ScrollReveal>
+              )
+            })}
           </div>
 
           <p className="text-center text-xs text-[#4a4540] mt-6">
-            All plans include a 7-day free trial. No credit card required to start.
+            {isLoggedIn
+              ? 'Manage subscription, invoices, and payment through the Stripe Customer Portal.'
+              : 'All plans include a 7-day free trial. No credit card required to start.'}
           </p>
         </div>
       </section>
@@ -547,67 +603,75 @@ export default function LandingPage() {
       <Testimonials />
 
       {/* ── FAQ ── */}
-      <section id="faq" className="py-24 border-t border-white/[0.05]">
-        <div className={W}>
-          <SectionHeader
-            eyebrow="Questions"
-            heading="Frequently asked"
-            sub="If your question isn't here, email us at support@soldsync.app."
-          />
-          <div className="space-y-2.5 max-w-3xl mx-auto">
-            {FAQ.map(({ q, a }) => (
-              <details key={q} className="group rounded-xl border border-white/[0.07] bg-[#1e1d1b] px-6 py-4 cursor-pointer hover:border-white/[0.12] transition-colors">
-                <summary className="flex items-start justify-between gap-4 font-semibold text-[#c8c2bb] list-none text-[14px] leading-snug">
-                  <span>{q}</span>
-                  <ChevronDown className="w-4 h-4 text-[#4a4540] group-open:rotate-180 transition-transform shrink-0 mt-0.5" />
-                </summary>
-                <p className="mt-3 text-[13px] text-[#7a7268] leading-relaxed border-t border-white/[0.05] pt-3">{a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FAQSection />
 
       {/* ── BOTTOM CTA ── */}
-      <section className="py-28 border-t border-white/[0.05] relative overflow-hidden">
+      <section className="py-20 md:py-28 border-t border-white/[0.05] relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#c97a40]/3 to-transparent" />
         </div>
-        <div className={`relative ${W} text-center`}>
+        <ScrollReveal className={`relative ${W} text-center`}>
           <div className="inline-flex items-center gap-2 text-xs text-[#7a7268] mb-6 px-3 py-1.5 rounded-full border border-white/[0.07] bg-[#212120]">
             <ShieldCheck className="w-3.5 h-3.5 text-[#4a9d6e]" />
             The next double-sale is preventable
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-5 leading-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-5 leading-tight">
             Your item just sold.<br />
             <span className="text-gradient">It&apos;s already gone everywhere.</span>
           </h2>
           <p className="text-[#7a7268] mb-10 text-base max-w-md mx-auto">
             Join resellers who stopped apologising for double-sales and started selling with confidence.
           </p>
-          <Link
-            href="/auth?tab=signup"
-            className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white font-medium text-base transition-all"
-          >
-            Get started free
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-          <p className="mt-4 text-xs text-[#4a4540]">No card required. Plans from $9.99/mo after 7-day trial.</p>
-        </div>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white font-medium text-base transition-all"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Go to dashboard
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          ) : (
+            <Link
+              href="/auth?tab=signup"
+              className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-[#c97a40] hover:bg-[#b86c34] text-white font-medium text-base transition-all"
+            >
+              Get started free
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
+          <p className="mt-4 text-xs text-[#4a4540]">
+            {isLoggedIn ? 'Your sync engine is live.' : 'No card required. Plans from $9.99/mo after 7-day trial.'}
+          </p>
+        </ScrollReveal>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.05] py-8">
-        <div className={`${W} flex flex-col sm:flex-row items-center justify-between gap-4`}>
-          <span className="text-sm font-bold">
-            Sold<span className="text-[#c97a40]">Sync</span>
-          </span>
-          <div className="flex items-center gap-6 text-xs text-[#4a4540]">
-            <Link href="/privacy" className="hover:text-[#7a7268] transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-[#7a7268] transition-colors">Terms</Link>
-            <a href="mailto:support@soldsync.app" className="hover:text-[#7a7268] transition-colors">support@soldsync.app</a>
+      <footer className="border-t border-white/[0.05] py-12">
+        <div className={`${W} space-y-8`}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-3 group">
+              <svg width="40" height="40" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 flex-shrink-0">
+                <path d="M8 14L14 20L14 8" stroke="#c97a40" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <path d="M24 18L18 12L18 24" stroke="#4a9d6e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <circle cx="16" cy="16" r="2.5" fill="#f0ece6"/>
+              </svg>
+              <div className="flex flex-col items-start">
+                <span className="text-xl font-bold">
+                  Sold<span className="text-[#c97a40]">Sync</span>
+                </span>
+                <span className="text-[9px] text-[#7a7268] font-medium tracking-widest mt-0.5">FROM XEQUTIVE TECH LTD</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-6 text-xs text-[#4a4540]">
+              <Link href="/privacy" className="hover:text-[#7a7268] transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-[#7a7268] transition-colors">Terms</Link>
+              <a href="mailto:support@soldsync.app" className="hover:text-[#7a7268] transition-colors">support@soldsync.app</a>
+            </div>
           </div>
-          <p className="text-xs text-[#2e2c28]">© {new Date().getFullYear()} SoldSync</p>
+          <div className="border-t border-white/[0.05] pt-6">
+            <p className="text-xs text-[#2e2c28]">© {new Date().getFullYear()} SoldSync. All rights reserved. Made with care by XEQUTIVE TECH LTD</p>
+          </div>
         </div>
       </footer>
 
